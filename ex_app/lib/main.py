@@ -370,11 +370,13 @@ def _webhooks_syncing():
         registered_listeners = get_registered_listeners()
         print("get_registered_listeners: ", json.dumps(registered_listeners, indent=4), flush=True)
         for expected_listener in expected_listeners:
+            expected_listener["filters"] = _preprocess_webhook_event_filter(expected_listener["filters"])
             registered_listeners_for_uri = get_registered_listeners_for_uri(
                 expected_listener["webhook"], registered_listeners
             )
             for event in expected_listener["events"]:
                 listener = next(filter(lambda listener: listener["event"] == event, registered_listeners_for_uri), None)
+                listener["eventFilter"] = _preprocess_webhook_event_filter(listener["eventFilter"])
                 if listener is not None:
                     if listener["eventFilter"] != expected_listener["filters"]:
                         print("webhooks_syncing: before update_listener:", json.dumps(listener))
@@ -396,6 +398,12 @@ def _webhooks_syncing():
                 ):
                     delete_listener(registered_listener)
         sleep(30)
+
+
+def _preprocess_webhook_event_filter(event_filter):
+    if event_filter in (None, {}):
+        return []
+    return event_filter
 
 
 def get_flow_paths(workspace: str, token: str) -> list[str]:
